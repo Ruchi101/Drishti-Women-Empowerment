@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'dart:convert';
 import 'package:google_maps_webservice/places.dart' as gmwplaces;
 import 'package:google_maps_webservice/directions.dart' as gmwdirections;
 import 'package:location/location.dart' as loc;
@@ -74,7 +75,7 @@ class MapsDemoState extends State<MapsDemo> {
                               )),
                           child: TextFormField(
                             controller: toController,
-                            onFieldSubmitted: (str) => updteLoc(),
+                            onFieldSubmitted: (str) => SearchLocation(),
                             decoration: InputDecoration(
                                 labelText: "To",
                                 contentPadding: EdgeInsets.all(5.0)),
@@ -186,8 +187,19 @@ class MapsDemoState extends State<MapsDemo> {
                             padding: const EdgeInsets.symmetric(vertical: 10.0),
                             child: RaisedButton(
                               onPressed: () async {
-                                var response = await http.get("http://127.0.0.1:5000/");
-                                print(response);
+                                print("Getting img");
+                                var response = await http
+                                    .get("http://ayush789.pythonanywhere.com/");
+                                print(response.body);
+                                var bytes = base64Decode(response.body);
+                                setState(() {
+                                  img = Image.memory(
+                                    bytes,
+                                    fit: BoxFit.fill,
+                                    width: MediaQuery.of(context).size.width,
+                                    height: MediaQuery.of(context).size.height,
+                                  );
+                                });
                               },
                               color: Colors.blue,
                               child: Padding(
@@ -348,7 +360,7 @@ class MapsDemoState extends State<MapsDemo> {
     });
   }
 
-  void updteLoc() async {
+  void SearchLocation() async {
     if (toController.text == "") return;
     var places = gmwplaces.GoogleMapsPlaces(
       apiKey: "AIzaSyApZJZMg-ArN-9i6qjDRlrXNF0tPM3-G4I",
@@ -450,6 +462,20 @@ class MapsDemoState extends State<MapsDemo> {
     print("Changed");
     setState(() {
       isStartVisible = true;
+    });
+  }
+
+  Future sendReview(double lat,double lon, int review) async {
+    String url = "http://ayush789.pythonanywhere.com/addreview?lat=$lat&lon=$lon&rev=$review";
+
+    var response = await http.get(url);
+    print(response);
+    return;
+  }
+
+  void UpdateLocation(){
+    setState(() {
+     location.getLocation().then((v){});
     });
   }
 }
