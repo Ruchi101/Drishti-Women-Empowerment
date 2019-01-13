@@ -226,7 +226,7 @@ class MapsDemoState extends State<MapsDemo> {
                               onPressed: () async {
                                 print("Getting img");
                                 var response = await http.get(
-                                    "http://53da0b0d.ngrok.io/gettowermap?n=$north&e=$east&w=$west&s=$south");
+                                    "http://ayush789.pythonanywhere.com/gettowermap?n=$north&e=$east&w=$west&s=$south");
                                 print(response.body);
                                 var bytes = base64Decode(response.body);
                                 setState(() {
@@ -265,7 +265,7 @@ class MapsDemoState extends State<MapsDemo> {
                               onPressed: () async {
                                 print("Getting img");
                                 var response = await http.get(
-                                    "http://53da0b0d.ngrok.io/getmap?n=$north&e=$east&w=$west&s=$south");
+                                    "http://ayush789.pythonanywhere.com/getmap?n=$north&e=$east&w=$west&s=$south");
                                 print(response.body);
                                 var bytes = base64Decode(response.body);
                                 setState(() {
@@ -568,7 +568,7 @@ class MapsDemoState extends State<MapsDemo> {
 
     double lat = currentLocation.latitude, lon = currentLocation.longitude;
     String url =
-        "http://53da0b0d.ngrok.io/addreview?lat=${currentLocation.latitude}&lon=${currentLocation.longitude}&rev=$review";
+        "http://ayush789.pythonanywhere.com/addreview?lat=${currentLocation.latitude}&lon=${currentLocation.longitude}&rev=$review";
     print("Sending $lat $lon");
     var response = await http.get(url);
     print(response.body);
