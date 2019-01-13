@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -6,6 +8,7 @@ import 'package:google_maps_webservice/places.dart' as gmwplaces;
 import 'package:google_maps_webservice/directions.dart' as gmwdirections;
 import 'package:location/location.dart' as loc;
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   runApp(MapPage());
@@ -37,9 +40,12 @@ var location = loc.Location();
 String destination = "Maujpur Metro Station";
 gmwdirections.Location dest = gmwdirections.Location(0.0, 0.0),
     begin = gmwdirections.Location(0.0, 0.0);
+LatLng currentLocation = LatLng(0.0, 0.0);
 GoogleMapController mapController;
 bool isStartVisible = false;
 Image img;
+double north, east, south, west;
+StreamSubscription<Map<String, double>> _locationSubscription;
 
 class MapsDemo extends StatefulWidget {
   @override
@@ -47,6 +53,20 @@ class MapsDemo extends StatefulWidget {
 }
 
 class MapsDemoState extends State<MapsDemo> {
+  @override
+  void initState() {
+    super.initState();
+
+    _locationSubscription =
+        location.onLocationChanged().listen((Map<String, double> result) {
+      setState(() {
+        currentLocation = LatLng(result["latitude"], result["longitude"]);
+        print(
+            "Changed Location ${currentLocation.latitude} ${currentLocation.longitude}");
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -56,9 +76,28 @@ class MapsDemoState extends State<MapsDemo> {
             children: <Widget>[
               GoogleMap(
                 onMapCreated: _onMapCreated,
-                options: GoogleMapOptions(),
+                options: GoogleMapOptions(
+                  rotateGesturesEnabled: false,
+                  scrollGesturesEnabled: false,
+                  tiltGesturesEnabled: false,
+                ),
               ),
-              (img != null) ? img : Container(),
+              (img != null)
+                  ? GestureDetector(
+                      /*onVerticalDragUpdate: (details) {
+                        mapController.moveCamera(
+                            CameraUpdate.scrollBy(0.0, -details.delta.dy));
+                      },
+                      onHorizontalDragUpdate: (details) {
+                        mapController.moveCamera(
+                            CameraUpdate.scrollBy(-details.delta.dx, 0.0));
+                      },*/
+                      child: Opacity(
+                        child: img,
+                        opacity: 0.60,
+                      ),
+                    )
+                  : Container(),
               Container(
                 child: Column(
                   children: <Widget>[
@@ -92,7 +131,12 @@ class MapsDemoState extends State<MapsDemo> {
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 10.0),
                           child: RaisedButton(
-                            onPressed: () {},
+                            onPressed: () {
+
+                              Scaffold.of(context).showSnackBar(SnackBar(
+                                  content: Text(
+                                      "Added Light to (${currentLocation.latitude} , ${currentLocation.longitude})")));
+                            },
                             color: Colors.blue,
                             child: Padding(
                               padding: const EdgeInsets.all(15.0),
@@ -124,9 +168,12 @@ class MapsDemoState extends State<MapsDemo> {
                                   child: FlatButton(
                                     child: Container(),
                                     onPressed: () {
+                                      UpdateLocation();
+                                      sendReview(currentLocation.latitude,
+                                          currentLocation.longitude, 1);
                                       Scaffold.of(context).showSnackBar(SnackBar(
                                           content: Text(
-                                              "Rated (28.667354 , 77.2371020) as Good")));
+                                              "Rated (${currentLocation.latitude} , ${currentLocation.longitude}) as Bad")));
                                     },
                                   ),
                                 ),
@@ -135,9 +182,12 @@ class MapsDemoState extends State<MapsDemo> {
                                   child: FlatButton(
                                     child: Container(),
                                     onPressed: () {
+                                      UpdateLocation();
+                                      sendReview(currentLocation.latitude,
+                                          currentLocation.longitude, 2);
                                       Scaffold.of(context).showSnackBar(SnackBar(
                                           content: Text(
-                                              "Rated (28.667354 , 77.2371020) as Good")));
+                                              "Rated (${currentLocation.latitude} , ${currentLocation.longitude}) as Average")));
                                     },
                                   ),
                                 ),
@@ -145,10 +195,13 @@ class MapsDemoState extends State<MapsDemo> {
                                   backgroundColor: Colors.green,
                                   child: FlatButton(
                                     child: Container(),
-                                    onPressed: () {
+                                    onPressed: () async {
+                                      await UpdateLocation();
+                                      sendReview(currentLocation.latitude,
+                                          currentLocation.longitude, 3);
                                       Scaffold.of(context).showSnackBar(SnackBar(
                                           content: Text(
-                                              "Rated (28.667354 , 77.2371020) as Good")));
+                                              "Rated (${currentLocation.latitude} , ${currentLocation.longitude}) as Good")));
                                     },
                                   ),
                                 ),
@@ -170,7 +223,30 @@ class MapsDemoState extends State<MapsDemo> {
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 10.0),
                             child: RaisedButton(
-                              onPressed: () {},
+                              onPressed: () async {
+                                print("Getting img");
+                                var response = await http.get(
+                                    "http://53da0b0d.ngrok.io/gettowermap?n=$north&e=$east&w=$west&s=$south");
+                                print(response.body);
+                                var bytes = base64Decode(response.body);
+                                setState(() {
+                                  img = Image.memory(
+                                    bytes,
+                                    fit: BoxFit.fill,
+                                    width: MediaQuery.of(context).size.width,
+                                    height: MediaQuery.of(context).size.height,
+                                  );
+                                });
+                                print(north);
+                                print(south);
+                                print(east);
+                                print(west);
+                                /*mapController.addMarker(MarkerOptions(
+                                    position: LatLng(north, east)));
+                                mapController.addMarker(MarkerOptions(
+                                    position: LatLng(south, west)));
+                              */
+                              },
                               color: Colors.blue,
                               child: Padding(
                                 padding: const EdgeInsets.all(15.0),
@@ -188,8 +264,8 @@ class MapsDemoState extends State<MapsDemo> {
                             child: RaisedButton(
                               onPressed: () async {
                                 print("Getting img");
-                                var response = await http
-                                    .get("http://ayush789.pythonanywhere.com/");
+                                var response = await http.get(
+                                    "http://53da0b0d.ngrok.io/getmap?n=$north&e=$east&w=$west&s=$south");
                                 print(response.body);
                                 var bytes = base64Decode(response.body);
                                 setState(() {
@@ -200,6 +276,15 @@ class MapsDemoState extends State<MapsDemo> {
                                     height: MediaQuery.of(context).size.height,
                                   );
                                 });
+                                print(north);
+                                print(south);
+                                print(east);
+                                print(west);
+                                /*mapController.addMarker(MarkerOptions(
+                                    position: LatLng(north, east)));
+                                mapController.addMarker(MarkerOptions(
+                                    position: LatLng(south, west)));
+                              */
                               },
                               color: Colors.blue,
                               child: Padding(
@@ -238,7 +323,7 @@ class MapsDemoState extends State<MapsDemo> {
                                 vertical: 10.0, horizontal: 0.0),
                             child: RaisedButton(
                               padding: EdgeInsets.all(0.0),
-                              onPressed: () {},
+                              onPressed: launchUber,
                               color: Colors.black,
                               child: Padding(
                                 padding: const EdgeInsets.all(15.0),
@@ -330,7 +415,7 @@ class MapsDemoState extends State<MapsDemo> {
               ),
             ),
             color: Colors.red,
-            onPressed: () {},
+            onPressed: call,
           ),
         ),
       ],
@@ -352,6 +437,11 @@ class MapsDemoState extends State<MapsDemo> {
             ),
           ),
         );
+
+        east = myloc["longitude"] + 0.00150;
+        west = myloc["longitude"] - 0.00150;
+        north = myloc["latitude"] + 0.0020;
+        south = myloc["latitude"] - 0.0020;
         /*
         mapController.addMarker(MarkerOptions(
           position: LatLng(myloc["latitude"], myloc["longitude"]),
@@ -361,6 +451,7 @@ class MapsDemoState extends State<MapsDemo> {
   }
 
   void SearchLocation() async {
+    print("Searching for location");
     if (toController.text == "") return;
     var places = gmwplaces.GoogleMapsPlaces(
       apiKey: "AIzaSyApZJZMg-ArN-9i6qjDRlrXNF0tPM3-G4I",
@@ -458,24 +549,56 @@ class MapsDemoState extends State<MapsDemo> {
             ),
             20.0),
       );
+
+      setState(() {
+        north = n;
+        south = s;
+        east = e;
+        west = w;
+      });
     });
     print("Changed");
     setState(() {
-      isStartVisible = true;
+      //isStartVisible = true;
     });
   }
 
-  Future sendReview(double lat,double lon, int review) async {
-    String url = "http://ayush789.pythonanywhere.com/addreview?lat=$lat&lon=$lon&rev=$review";
+  Future sendReview(double lat0, double lon0, int review) async {
+    await UpdateLocation();
 
+    double lat = currentLocation.latitude, lon = currentLocation.longitude;
+    String url =
+        "http://53da0b0d.ngrok.io/addreview?lat=${currentLocation.latitude}&lon=${currentLocation.longitude}&rev=$review";
+    print("Sending $lat $lon");
     var response = await http.get(url);
-    print(response);
+    print(response.body);
+    setState(() {
+      print("Located At: $lat $lon");
+      /*mapController.addMarker(
+        MarkerOptions(
+            position: LatLng(lat, lon),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueOrange)),
+      );*/
+    });
     return;
   }
 
-  void UpdateLocation(){
+  void UpdateLocation() async {
+    location = loc.Location();
+    var myloc = await location.getLocation();
     setState(() {
-     location.getLocation().then((v){});
+      currentLocation = LatLng(myloc["latitude"], myloc["longitude"]);
+      print(
+          "Chnaged Location ${currentLocation.latitude} ${currentLocation.longitude}");
     });
   }
+}
+
+launchUber() async {
+  await launch("uber://?action=setPickup&pickup=my_location");
+}
+
+call() async {
+  await launch("tel:8384022854");
 }
