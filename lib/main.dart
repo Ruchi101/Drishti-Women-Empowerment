@@ -114,7 +114,7 @@ class MapsDemoState extends State<MapsDemo> {
                               )),
                           child: TextFormField(
                             controller: toController,
-                            onFieldSubmitted: (str) => SearchLocation(),
+                            onFieldSubmitted: (str) => SearchLocation(str),
                             decoration: InputDecoration(
                                 labelText: "To",
                                 contentPadding: EdgeInsets.all(5.0)),
@@ -132,7 +132,6 @@ class MapsDemoState extends State<MapsDemo> {
                           padding: const EdgeInsets.symmetric(vertical: 10.0),
                           child: RaisedButton(
                             onPressed: () {
-
                               Scaffold.of(context).showSnackBar(SnackBar(
                                   content: Text(
                                       "Added Light to (${currentLocation.latitude} , ${currentLocation.longitude})")));
@@ -264,6 +263,7 @@ class MapsDemoState extends State<MapsDemo> {
                             child: RaisedButton(
                               onPressed: () async {
                                 print("Getting img");
+                                print("$north");
                                 var response = await http.get(
                                     "http://ayush789.pythonanywhere.com/getmap?n=$north&e=$east&w=$west&s=$south");
                                 print(response.body);
@@ -450,13 +450,23 @@ class MapsDemoState extends State<MapsDemo> {
     });
   }
 
-  void SearchLocation() async {
+  void SearchLocation(String text) async {
     print("Searching for location");
-    if (toController.text == "") return;
+    //if (toController.text == "") return;
+    print("text $text");
+    if (text == "") {
+      print("Going to clear");
+      mapController.clearMarkers();
+      mapController.clearPolylines();
+      await mapController.moveCamera(CameraUpdate.newCameraPosition(
+          CameraPosition(target: currentLocation,zoom: 17.0)));
+      print("Cleared");
+      return;
+    }
     var places = gmwplaces.GoogleMapsPlaces(
-      apiKey: "AIzaSyApZJZMg-ArN-9i6qjDRlrXNF0tPM3-G4I",
+      apiKey: "Your Api Key",
     );
-    var val = await places.searchByText(toController.text).catchError((e) {
+    var val = await places.searchByText(text).catchError((e) {
       print("Error: $e}");
       return;
     });
@@ -483,8 +493,9 @@ class MapsDemoState extends State<MapsDemo> {
     );
 
     var directions = gmwdirections.GoogleMapsDirections(
-      apiKey: "AIzaSyApZJZMg-ArN-9i6qjDRlrXNF0tPM3-G4I",
+      apiKey: "Your Api Key",
     );
+    print(directions.url);
     var dirresp =
         await directions.directionsWithLocation(begin, dest).catchError(
       (e) {
@@ -492,6 +503,8 @@ class MapsDemoState extends State<MapsDemo> {
         return;
       },
     );
+
+    print("dirresp.isOkay ${dirresp.isOkay}");
     print(dirresp.routes.length);
 
     dirresp.routes.forEach((route) {
@@ -600,5 +613,5 @@ launchUber() async {
 }
 
 call() async {
-  await launch("tel:8384022854");
+  await launch("tel:0000000000");
 }
